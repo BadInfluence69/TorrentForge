@@ -1,0 +1,11 @@
+{
+  "trackers": "udp://tracker.opentrackr.org:1337/announce\nudp://open.stealth.si:80/announce\nudp://tracker.torrent.eu.org:451/announce\nudp://open.demonii.com:1337/announce\nudp://tracker.qu.ax:6969/announce\nudp://exodus.desync.com:6969/announce\nudp://tracker.gmi.gd:6969/announce\nudp://tracker.ducks.party:1984/announce\nudp://explodie.org:6969/announce\nudp://tracker.bittor.pw:1337/announce\nudp://tracker.corpscorp.online:80/announce\nudp://tracker-udp.gbitt.info:80/announce\nudp://tracker.0x7c0.com:6969/announce\nhttp://tracker.dler.com:6969/announce\nudp://tracker.dler.org:6969/announce\nudp://tracker2.dler.org:80/announce\nudp://tracker.farted.net:6969/announce\nudp://tracker.peerfect.org:6969/announce\nudp://tracker.opentrackr.com:6969/announce\nudp://tracker.ilibr.org:6969/announce",
+  "web_seeds": "[https://mywebsite.com/downloads/FXServer.exe",
+  "comment": "made by the web test",
+  "source": "SELFTEST",
+  "private": false,
+  "version": "hybrid",
+  "piece_length": 0,
+  "include_hidden": true,
+  "last_dir": "E:\\FiveMServer\\FX"
+}
