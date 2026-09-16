@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TorrentForge - build a .torrent without a client</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">&#9889;</span>
+    <div>
+      <h1>TorrentForge</h1>
+      <p class="tag">pick a folder &rarr; create torrent &rarr; download the .torrent</p>
+    </div>
+  </div>
+  <div class="topmeta">
+    <span class="pill">v{{ version }}</span>
+    <button id="open-output" class="ghost" type="button" title="Open the output folder on this machine">Output folder</button>
+  </div>
+</header>
+
+<main>
+  <!-- STEP 1 ------------------------------------------------------------- -->
+  <section class="card" id="step-source">
+    <div class="card-head">
+      <h2><span class="step">1</span> Choose what to share</h2>
+      <span class="hint">Nothing is uploaded &mdash; the file stays on this machine, only its hashes are read.</span>
+    </div>
+
+    <div class="pathrow">
+      <input type="text" id="source-path" placeholder="C:\Users\You\Videos\MyFolder  (type a path, or browse below)" spellcheck="false">
+      <button id="btn-pick-folder" class="primary-outline" type="button">Browse folder&hellip;</button>
+      <button id="btn-pick-file" class="primary-outline" type="button">Browse file&hellip;</button>
+      <button id="btn-toggle-browser" class="ghost" type="button">Server browser</button>
+    </div>
+
+    <div id="browser" class="browser hidden">
+      <div class="drives" id="drives"></div>
+      <div class="crumbs" id="crumbs"></div>
+      <div class="browser-body">
+        <ul class="listing" id="listing"></ul>
+      </div>
+      <div class="browser-foot">
+        <label class="check"><input type="checkbox" id="show-hidden"> show hidden entries</label>
+        <button id="btn-use-folder" class="primary" type="button">Use this folder</button>
+      </div>
+    </div>
+
+    <div id="selected" class="selected hidden">
+      <div class="selname" id="sel-name">&mdash;</div>
+      <div class="selmeta" id="sel-meta"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 ------------------------------------------------------------- -->
+  <section class="card" id="step-options">
+    <div class="card-head">
+      <h2><span class="step">2</span> Torrent options</h2>
+      <span class="hint">Everything here is optional except the trackers, if you plan to share publicly.</span>
+    </div>
+
+    <div class="grid">
+      <div class="field wide">
+        <label for="trackers">Trackers (one announce URL per line)</label>
+        <textarea id="trackers" rows="4" spellcheck="false"
+          placeholder="udp://tracker.opentrackr.org:1337/announce&#10;udp://open.demonii.com:1337/announce"></textarea>
+      </div>
+
+      <div class="field wide">
+        <label for="web-seeds">Web seeds / HTTP mirrors (optional, one per line)</label>
+        <textarea id="web-seeds" rows="2" spellcheck="false" placeholder="https://example.com/files/"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="comment">Comment</label>
+        <input type="text" id="comment" placeholder="free text stored in the torrent">
+      </div>
+
+      <div class="field">
+        <label for="source-tag">Source tag</label>
+        <input type="text" id="source-tag" placeholder="used by private trackers">
+      </div>
+
+      <div class="field">
+        <label for="torrent-name">Torrent name (defaults to the folder name)</label>
+        <input type="text" id="torrent-name" placeholder="leave empty to keep the real name">
+      </div>
+
+      <div class="field">
+        <label for="piece-length">Piece size</label>
+        <select id="piece-length">
+          <option value="0" selected>Automatic (recommended)</option>
+          {% for option in piece_options %}
+          <option value="{{ option.value }}">{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="version">Torrent format</label>
+        <select id="version">
+          <option value="hybrid" selected>Hybrid &mdash; v1 + v2 (works everywhere)</option>
+          <option value="v1">v1 only &mdash; classic SHA-1</option>
+          <option value="v2">v2 only &mdash; BEP 52 SHA-256</option>
+        </select>
+      </div>
+
+      <div class="field toggles">
+        <label class="check"><input type="checkbox" id="private"> Private torrent (no DHT / PEX)</label>
+        <label class="check"><input type="checkbox" id="include-hidden"> Include hidden files</label>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3 ------------------------------------------------------------- -->
+  <section class="card" id="step-build">
+    <div class="card-head">
+      <h2><span class="step">3</span> Build it</h2>
+      <span class="hint" id="build-hint">Hashing speed depends on your disk &mdash; big folders take a while.</span>
+    </div>
+
+    <div class="buildrow">
+      <button id="btn-create" class="primary big" type="button" disabled>Create Torrent</button>
+      <button id="btn-cancel" class="danger hidden" type="button">Cancel</button>
+    </div>
+
+    <div id="progress-wrap" class="progress-wrap hidden">
+      <div class="bar"><div class="fill" id="bar-fill"></div></div>
+      <div class="progress-meta">
+        <span id="progress-percent">0%</span>
+        <span id="progress-file" class="mono"></span>
+        <span id="progress-rate"></span>
+      </div>
+    </div>
+
+    <div id="error-box" class="error hidden"></div>
+  </section>
+
+  <!-- RESULT ------------------------------------------------------------- -->
+  <section class="card result hidden" id="step-result">
+    <div class="card-head">
+      <h2><span class="step ok">&#10003;</span> Torrent created</h2>
+      <span class="hint" id="result-file"></span>
+    </div>
+
+    <div class="resultgrid" id="result-grid"></div>
+
+    <div class="magnetrow">
+      <input type="text" id="magnet" class="mono" readonly>
+      <button id="btn-copy-magnet" class="ghost" type="button">Copy magnet</button>
+    </div>
+
+    <div class="downloadrow">
+      <a id="btn-download" class="primary big download" href="#" download>Download Torrent File</a>
+      <button id="btn-again" class="ghost" type="button">Make another</button>
+    </div>
+
+    <details class="filelist">
+      <summary>Files in this torrent (<span id="file-count">0</span>)</summary>
+      <ul id="result-files"></ul>
+    </details>
+  </section>
+
+  <!-- HISTORY ------------------------------------------------------------ -->
+  <section class="card" id="step-history">
+    <div class="card-head">
+      <h2>Previously built</h2>
+      <span class="hint mono" id="output-dir"></span>
+    </div>
+    <ul class="history" id="history"></ul>
+  </section>
+</main>
+
+<footer>
+  <span>TorrentForge &mdash; pure Python bencode + SHA-1/SHA-256 hashing. No torrent client involved.</span>
+</footer>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
